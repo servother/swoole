@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>弹幕小测试</title>
+	<!-- <script src="dist/jquery-1.11.1.min.js"></script> -->
+	<script src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+	<script src="./danmu.js"></script>
+	<style type="text/css">
+		#danmu {
+			width: 640px;
+			height: 360px;
+			background-color: gray;
+		}
+		#send_box {
+			position: absolute;
+			top: 370px;
+			left: 0px;
+		}
+	</style>
+</head>
+<body>
+
+	<div id="danmu"></div>
+	<div id="send_box">
+		<input id="content" type="text"/>
+		<br/>字体大小：
+		<input type="radio" name="font_size" value="1" checked="checked" />大
+		<input type="radio" name="font_size" value="0" />小
+		<br/>弹幕颜色：
+		<input type="radio" name="font_color" value="white" checked="checked" />普通
+		<input type="radio" name="font_color" value="red" />红色
+		<input type="radio" name="font_color" value="green" />绿色
+		<input type="radio" name="font_color" value="blue" />蓝色
+		<input type="radio" name="font_color" value="yellow" />黄色
+		<br/><button type="submit" onclick="send()">发送</button>
+	</div>
+</body>
+<script type="text/javascript">
+	console.log('');
+	var ws = new WebSocket("ws://127.0.0.1:9501");
+	ws.onopen = function(){
+	    console.log("握手成功");
+	    setInterval(heart, 10000);
+	};
+	ws.onmessage = function(e){
+	    //console.log(e);
+	    var resData = e.data;
+	    resData = JSON.parse(resData);
+	    console.log(resData);
+	    var time = jQuery('#danmu').data("nowtime") + 1;
+	    var text_obj = '{ "text":"' + resData.data + '" , "color":"' + resData.color + '" ,"size":"' + resData.size + '","position":"0","time":"' + time + '" ,"isnew":" "}';   //构造加上了innew属性的字符串danmu对象
+	    console.log(text_obj);
+    	var new_obj = eval('(' + text_obj + ')');       //转化为js对象
+    	jQuery('#danmu').danmu("add_danmu", new_obj);    //向插件中添加该danmu对象
+	};
+	ws.onerror = function(){
+	    console.log("error");
+	};
+	$(document).ready(function() {
+		$("#danmu").danmu({
+			left: 0,    //区域的起始位置x坐标
+			top: 0 ,  //区域的起始位置y坐标
+			height: 360, //区域的高度
+			width: 640, //区域的宽度
+			zindex :100, //div的css样式zindex
+			speed:20000, //弹幕速度，飞过区域的毫秒数
+			sumtime:50000 , //弹幕运行总时间
+			danmuss:{}, //danmuss对象，运行时的弹幕内容
+			default_font_color:"#FFFFFF", //弹幕默认字体颜色
+			font_size_small:16, //小号弹幕的字体大小,注意此属性值只能是整数
+			font_size_big:24, //大号弹幕的字体大小
+			opacity:"0.9", //弹幕默认透明度
+			top_botton_danmu_time:6000 //顶端底端弹幕持续时间
+		} );
+		$('#danmu').danmu('danmu_start');
+	});
+	
+	function send() {
+		var res = {};
+		//console.log(document.getElementById('content').value);
+		//data = document.getElementById('content').value;
+		data = $("#content").val();
+		data = trim(data);
+		if(!data){
+			$("#content").val('');
+			alert('内容不能为空！');
+			return false;
+		}
+		//document.getElementById('content').value = '';
+		$("#content").val('');
+		fontSize = $("input[name='font_size']:checked").val();
+		fontColor = $("input[name='font_color']:checked").val();
+		res = '{"data":"' + data + '","size":"' + fontSize + '","color":"' + fontColor + '"}';
+		//JSON.stringify(res);
+		console.log(res);
+		ws.send(res);
+	}
+	
+	function heart () {
+		ws.send('{"data":"*$%^%$*"}');
+	}
+	
+	function trim(str) {
+		return str.replace(/(^\s+)|(\s+$)/g, "");
+	}
+	
+	$("#content").keyup(function(event){
+		if (event.keyCode == 13) {
+			send();
+		}
+	}); 
+</script>
+</html>
